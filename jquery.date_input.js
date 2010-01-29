@@ -11,11 +11,12 @@ function DateInput(el, opts) {
   this.selectDate();
   this.hide();
 };
-DateInput.DEFAULT_OPTS = {
+DateInput.DEFAULT_OPTS = { // add day_names and change start of week to Sun
   month_names: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+  day_names: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
   short_month_names: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
   short_day_names: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-  start_of_week: 1
+  start_of_week: 0
 };
 DateInput.prototype = {
   build: function() {
@@ -29,9 +30,9 @@ DateInput.prototype = {
     $(".next", monthNav).click(this.bindToObj(function() { this.moveMonthBy(1); }));
     
     var yearNav = $('<p class="year_nav">' +
-      '<span class="button prev" title="[Ctrl+Page-Up]">&#171;</span>' +
+      '<span class="button prev" title="[Ctrl+Page-Up]">&lsaquo;</span>' +
       ' <span class="year_name"></span> ' +
-      '<span class="button next" title="[Ctrl+Page-Down]">&#187;</span>' +
+      '<span class="button next" title="[Ctrl+Page-Down]">&rsaquo;</span>' +
       '</p>');
     this.yearNameSpan = $(".year_name", yearNav);
     $(".prev", yearNav).click(this.bindToObj(function() { this.moveMonthBy(-12); }));
@@ -83,10 +84,11 @@ DateInput.prototype = {
         
         if (this.isFirstDayOfWeek(currentDay)) dayCells += "<tr>";
         
+		// separate elements for year, month, day to play with in changeEntry
         if (currentDay.getMonth() == date.getMonth()) {
-          dayCells += '<td class="selectable_day" date="' + this.dateToString(currentDay) + '">' + currentDay.getDate() + '</td>';
+          dayCells += '<td class="selectable_day" year="' + currentDay.getFullYear() + '" month="' + (currentDay.getMonth() + 1) + '" day="' + currentDay.getDate() + '" date="' + this.dateToString(currentDay) + '">' + currentDay.getDate() + '</td>';
         } else {
-          dayCells += '<td class="unselected_month" date="' + this.dateToString(currentDay) + '">' + currentDay.getDate() + '</td>';
+          dayCells += '<td class="unselected_month" year="' + currentDay.getFullYear() + '" month="' + (currentDay.getMonth() + 1) + '" day="' + currentDay.getDate() + '" date="' + this.dateToString(currentDay) + '">' + currentDay.getDate() + '</td>';
         };
         
         if (this.isLastDayOfWeek(currentDay)) dayCells += "</tr>";
@@ -97,8 +99,10 @@ DateInput.prototype = {
       this.monthNameSpan.empty().append(this.monthName(date));
       this.yearNameSpan.empty().append(this.currentMonth.getFullYear());
       
+	  // Add in my custom method: changeEntry(year, month, day)
       $(".selectable_day", this.tbody).click(this.bindToObj(function(event) {
         this.changeInput($(event.target).attr("date"));
+		this.changeEntry($(event.target).attr("year"), $(event.target).attr("month"), $(event.target).attr("day"));
       }));
       
       $("td[date=" + this.dateToString(new Date()) + "]", this.tbody).addClass("today");
@@ -128,14 +132,14 @@ DateInput.prototype = {
   // Write a date string to the input and hide. Trigger the change event so we know to update the
   // selectedDate.
   changeInput: function(dateString) {
-    this.input.val(dateString).change();
+    $('.date').text(dateString); // Instead of putting the dateString in the input, put it in .date
     this.hide();
   },
   
   show: function() {
     this.rootLayers.css("display", "block");
     $([window, document.body]).click(this.hideIfClickOutside);
-    this.input.unbind("focus", this.show);
+    this.input.unbind("click", this.show); // show on click instead of focus
     $(document.body).keydown(this.keydownHandler);
     this.setPosition();
   },
@@ -143,7 +147,7 @@ DateInput.prototype = {
   hide: function() {
     this.rootLayers.css("display", "none");
     $([window, document.body]).unbind("click", this.hideIfClickOutside);
-    this.input.focus(this.show);
+    this.input.click(this.show); // on click instead of focus
     $(document.body).unbind("keydown", this.keydownHandler);
   },
   
@@ -212,7 +216,7 @@ DateInput.prototype = {
   },
   
   dateToString: function(date) {
-    return date.getDate() + " " + this.short_month_names[date.getMonth()] + " " + date.getFullYear();
+    return this.day_names[date.getDay()] + ", " + this.month_names[date.getMonth()] + " " + date.getDate() + ", " + date.getFullYear(); // Format: Friday, January 29, 2010
   },
   
   setPosition: function() {
